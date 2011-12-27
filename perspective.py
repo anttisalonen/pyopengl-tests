@@ -72,7 +72,6 @@ def init():
 
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LEQUAL)
-    glCullFace(GL_BACK)
 
     return program
 
