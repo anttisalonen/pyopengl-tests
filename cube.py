@@ -51,13 +51,8 @@ def init():
     return program
 
 def drawWithoutVBOs(vertices, indices):
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
     glEnableVertexAttribArray(0)
-
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertices)
-
     glDrawElementsus(GL_TRIANGLES, indices)
 
 def drawWithVBOs(vertices, indices, normals = None, texturecoords = None):
