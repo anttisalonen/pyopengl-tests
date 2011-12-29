@@ -75,15 +75,7 @@ def init():
 
     return program
 
-xpos = 0
-ypos = 0
-zpos = -1.55
-
-xrot = radians(45)
-yrot = radians(135)
-zrot = radians(90)
-
-def drawWithoutVBOs():
+def drawWithoutVBOs(state):
     # Perspective
     fov = 90.0
     aspect_ratio = width / height
@@ -102,11 +94,14 @@ def drawWithoutVBOs():
 
     # Translation
     trans = numpy.identity(4, numpy.float32)
-    trans[3][0] = xpos
-    trans[3][1] = ypos
-    trans[3][2] = zpos
+    trans[3][0] = state[controls.xpos]
+    trans[3][1] = state[controls.ypos]
+    trans[3][2] = state[controls.zpos]
 
     # Rotation
+    xrot = state[controls.xrot]
+    yrot = state[controls.yrot]
+    zrot = state[controls.zrot]
     rotat = numpy.identity(4, numpy.float32)
     rotat[0][0] = cos(yrot) * cos(zrot)
     rotat[1][0] = -cos(xrot) * sin(zrot) + sin(xrot) * sin(yrot) * cos(zrot)
@@ -123,6 +118,38 @@ def drawWithoutVBOs():
 
     glDrawElementsus(GL_TRIANGLES, indices)
 
+class controls:
+    xrot = 1
+    yrot = 2
+    zrot = 3
+    xpos = 4
+    ypos = 5
+    zpos = 6
+
+rot_step = radians(1.0)
+pos_step = 0.01
+steps = dict()
+steps[controls.xrot] = rot_step
+steps[controls.yrot] = rot_step
+steps[controls.zrot] = rot_step
+steps[controls.xpos] = pos_step
+steps[controls.ypos] = pos_step
+steps[controls.zpos] = pos_step
+
+mp = dict()
+mp[K_q] = (controls.xrot, True)
+mp[K_a] = (controls.xrot, False)
+mp[K_w] = (controls.yrot, True)
+mp[K_s] = (controls.yrot, False)
+mp[K_e] = (controls.zrot, True)
+mp[K_d] = (controls.zrot, False)
+mp[K_LEFT] = (controls.xpos, False)
+mp[K_RIGHT] = (controls.xpos, True)
+mp[K_PAGEUP] = (controls.ypos, True)
+mp[K_PAGEDOWN] = (controls.ypos, False)
+mp[K_UP] = (controls.zpos, True)
+mp[K_DOWN] = (controls.zpos, False)
+
 def main():
     pygame.init()
     pygame.display.set_mode((width, height), HWSURFACE | OPENGL | DOUBLEBUF)
@@ -130,75 +157,45 @@ def main():
     program = init()
 
     done = False
-    xrot_delta = 0
-    yrot_delta = 0
-    zrot_delta = 0
-    xpos_delta = 0
-    ypos_delta = 0
-    zpos_delta = 0
-    global xrot
-    global yrot
-    global zrot
-    global xpos
-    global ypos
-    global zpos
+    state = dict()
+
+    state[controls.xrot] = radians(45)
+    state[controls.yrot] = radians(135)
+    state[controls.zrot] = radians(90)
+    state[controls.xpos] = 0
+    state[controls.ypos] = 0
+    state[controls.zpos] = -1.55
+    delta = dict()
+    delta[controls.xrot] = 0
+    delta[controls.yrot] = 0
+    delta[controls.zrot] = 0
+    delta[controls.xpos] = 0
+    delta[controls.ypos] = 0
+    delta[controls.zpos] = 0
 
     while not done:
         glViewport(0, 0, width, height)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glUseProgram(program)
-        drawWithoutVBOs()
+        drawWithoutVBOs(state)
         pygame.display.flip()
-        xrot += radians(xrot_delta)
-        yrot += radians(yrot_delta)
-        zrot += radians(zrot_delta)
-        xpos += xpos_delta
-        ypos += ypos_delta
-        zpos += zpos_delta
+        for key, value in state.items():
+            state[key] += delta[key]
         for event in pygame.event.get():
             if event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
+                if event.key in mp:
+                    what, up = mp[event.key]
+                    step = steps[what]
+                    delta[what] = step if up else -step
+                elif event.key == K_ESCAPE:
                     done = True
                 elif event.key == K_p:
-                    print "X, Y, Z:", xpos, ypos, zpos
-                    print "Rotation:", degrees(xrot), degrees(yrot), degrees(zrot)
-                elif event.key == K_q:
-                    xrot_delta = 1
-                elif event.key == K_a:
-                    xrot_delta = -1
-                elif event.key == K_w:
-                    yrot_delta = 1
-                elif event.key == K_s:
-                    yrot_delta = -1
-                elif event.key == K_e:
-                    zrot_delta = 1
-                elif event.key == K_d:
-                    zrot_delta = -1
-                elif event.key == K_LEFT:
-                    xpos_delta = -0.01
-                elif event.key == K_RIGHT:
-                    xpos_delta = 0.01
-                elif event.key == K_UP:
-                    zpos_delta = 0.01
-                elif event.key == K_DOWN:
-                    zpos_delta = -0.01
-                elif event.key == K_PAGEUP:
-                    ypos_delta = 0.01
-                elif event.key == K_PAGEDOWN:
-                    ypos_delta = -0.01
+                    print "X, Y, Z:", state[controls.xpos], state[controls.ypos], state[controls.zpos]
+                    print "Rotation:", degrees(state[controls.xrot]), degrees(state[controls.yrot]), degrees(state[controls.zrot])
             elif event.type == KEYUP:
-                if event.key == K_q or event.key == K_a:
-                    xrot_delta = 0
-                elif event.key == K_w or event.key == K_s:
-                    yrot_delta = 0
-                elif event.key == K_e or event.key == K_d:
-                    zrot_delta = 0
-                elif event.key == K_LEFT or event.key == K_RIGHT:
-                    xpos_delta = 0
-                elif event.key == K_UP or event.key == K_DOWN:
-                    zpos_delta = 0
-                elif event.key == K_PAGEUP or event.key == K_PAGEDOWN:
-                    ypos_delta = 0
+                if event.key in mp:
+                    what, up = mp[event.key]
+                    delta[what] = 0
 
 if __name__ == '__main__':
     main()
