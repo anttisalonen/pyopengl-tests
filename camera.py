@@ -2,6 +2,7 @@
 
 import time
 from math import radians, degrees, cos, sin, tan
+from copy import deepcopy
 
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
@@ -165,10 +166,6 @@ class controls:
 
 rot_step = radians(1.0)
 pos_step = 0.01
-steps = dict()
-steps[controls.pos] = pos_step
-steps[controls.target] = rot_step
-steps[controls.up] = rot_step
 
 mp = dict()
 mp[K_LEFT] = lambda tgt, upv: pos_step * normalized(numpy.cross(tgt, upv))
@@ -188,8 +185,8 @@ def main():
     mouse_look = False
     state = dict()
     state[controls.pos] = numpy.array([0, 0, 1.55], numpy.float32)
-    state[controls.target] = numpy.array([0, 0, 1], numpy.float32)
-    state[controls.up] = numpy.array([0, 1, 0], numpy.float32)
+    state[controls.target] = deepcopy(world_front)
+    state[controls.up] = deepcopy(world_up)
     state[controls.hrot] = radians(90)
     state[controls.vrot] = 0
     handle_mouse_move(state, 0, 0)
@@ -206,8 +203,10 @@ def main():
         glUseProgram(program)
         drawWithoutVBOs(state)
         pygame.display.flip()
+
         for delta in pos_delta.values():
             state[controls.pos] += delta
+
         for event in pygame.event.get():
             if event.type == KEYDOWN:
                 if event.key in mp:
@@ -241,16 +240,18 @@ def main():
             start_time = curr_time
             frames = 0
 
+world_front = numpy.array([1, 0, 0], numpy.float32)
+world_up = numpy.array([0, 1, 0], numpy.float32)
+
 def handle_mouse_move(state, xdiff, ydiff):
     state[controls.hrot] += xdiff * rot_step
     state[controls.vrot] += ydiff * rot_step
 
-    vaxis = numpy.array([0, 1, 0], numpy.float32)
-    view = numpy.array([1, 0, 0], numpy.float32)
-    rotate_vector(view, state[controls.hrot], vaxis)
+    view = deepcopy(world_front)
+    rotate_vector(view, state[controls.hrot], world_up)
     normalize(view)
 
-    haxis = numpy.cross(vaxis, view)
+    haxis = numpy.cross(world_up, view)
     normalize(haxis)
     rotate_vector(view, state[controls.vrot], haxis)
     normalize(view)
