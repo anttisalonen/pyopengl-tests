@@ -83,24 +83,26 @@ def load_opengl_texture(filename):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR)
     return texid
 
-def init(vertices, texcoords, normals):
+def init(vertices, texcoords, normals, indices):
     vertexShader = compileShader(vertex_shader_code, GL_VERTEX_SHADER)
     fragmentShader = compileShader(fragment_shader_code, GL_FRAGMENT_SHADER)
     program = glCreateProgram()
     glAttachShader(program, vertexShader)
     glAttachShader(program, fragmentShader)
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertices)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, texcoords)
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, normals)
+    vboids = glGenBuffers(4)
 
-    glEnableVertexAttribArray(0)
-    glEnableVertexAttribArray(1)
-    glEnableVertexAttribArray(2)
+    for idx, (data, size, attr) in enumerate([(vertices, 3, 'a_Position'),
+                                              (texcoords, 2, 'a_texCoord'),
+                                              (normals, 3,  'a_Normal')]):
+        glBindBuffer(GL_ARRAY_BUFFER, vboids[idx])
+        glBufferData(GL_ARRAY_BUFFER, data, GL_STATIC_DRAW)
+        glEnableVertexAttribArray(idx)
+        glVertexAttribPointer(idx, size, GL_FLOAT, GL_FALSE, 0, None)
+        glBindAttribLocation(program, idx, attr)
 
-    glBindAttribLocation(program, 0, "a_Position")
-    glBindAttribLocation(program, 1, "a_texCoord")
-    glBindAttribLocation(program, 2, "a_Normal")
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboids[3])
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW)
 
     glLinkProgram(program)
 
@@ -122,7 +124,7 @@ def init(vertices, texcoords, normals):
 
     return program
 
-def drawWithoutVBOs(program, texid, state, indices):
+def drawWithVBOs(program, texid, state, indices):
     # Perspective
     fov = 90.0
     aspect_ratio = width / height
@@ -179,7 +181,7 @@ def drawWithoutVBOs(program, texid, state, indices):
             directional_dir[1], directional_dir[2])
     glUniform3f(directionalLightColLoc, 1.0, 1.0, 1.0)
 
-    glDrawElementsus(GL_TRIANGLES, indices)
+    glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_SHORT, None)
 
 def rotation_matrix(xrot, yrot, zrot):
     # NOTE: this could be optimized.
@@ -255,7 +257,7 @@ def get_model_indices(model):
             indices += face
         else:
             raise ValueError, "Face has %d indices" % len(face)
-    return indices
+    return numpy.array(indices, numpy.ushort)
 
 def get_model_texcoords(model):
     # NOTE: this drops the W from UVW-coordinates.
@@ -277,7 +279,7 @@ def main():
     pygame.init()
     pygame.display.set_mode((width, height), HWSURFACE | OPENGL | DOUBLEBUF)
 
-    program = init(vertices, texcoords, normals)
+    program = init(vertices, texcoords, normals, indices)
     texid = load_opengl_texture('snow.jpg')
 
     done = False
@@ -301,7 +303,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glEnable(GL_TEXTURE_2D)
         glUseProgram(program)
-        drawWithoutVBOs(program, texid, state, indices)
+        drawWithVBOs(program, texid, state, indices)
         pygame.display.flip()
 
         for delta in pos_delta.values():
