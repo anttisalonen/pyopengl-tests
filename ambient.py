@@ -37,11 +37,11 @@ fragment_shader_code = """
 varying vec2 v_texCoord;
 
 uniform sampler2D s_texture;
-uniform vec4 u_ambientColor;
+uniform vec4 u_ambientLight;
 
 void main()
 {
-    gl_FragColor = texture2D(s_texture, v_texCoord) * u_ambientColor;
+    gl_FragColor = texture2D(s_texture, v_texCoord) * u_ambientLight;
 }
 """
 
@@ -89,7 +89,7 @@ def init(vertices, texcoords):
     global ambientLoc
     mvpLoc = glGetUniformLocation(program, "u_MVP")
     stextLoc = glGetUniformLocation(program, "s_texture")
-    ambientLoc = glGetUniformLocation(program, "u_ambientColor")
+    ambientLoc = glGetUniformLocation(program, "u_ambientLight")
 
     glClearColor(0.0, 0.0, 0.0, 1.0)
 
