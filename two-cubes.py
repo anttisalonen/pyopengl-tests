@@ -235,6 +235,12 @@ def drawWithVBOs(entities, texid, state, lights):
     glUniform3f(pointLightAttnLoc, 0, 0, 6)
     glUniform3f(pointLightColLoc, 1, 1, 1)
 
+    pointLightTime = radians((curr_time / 10) % 360)
+    pointLightPos = [sin(pointLightTime), 0.5, cos(pointLightTime)]
+    entities[2].position[0] = pointLightPos[0]
+    entities[2].position[1] = pointLightPos[1]
+    entities[2].position[2] = pointLightPos[2]
+
     for entity in entities:
         # Translation
         trans = numpy.identity(4, numpy.float32)
@@ -253,14 +259,9 @@ def drawWithVBOs(entities, texid, state, lights):
         glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, modelview)
 
         if lights.pointLightEnabled:
-            def clamp(v, a, b):
-                return max(a, min(v, b))
-            pointLightTime = radians((curr_time / 10) % 360)
-            px = sin(pointLightTime) - entity.position[0]
-            py = 0.5 - entity.position[1]
-            pz = cos(pointLightTime) - entity.position[2]
-            pointLightPos = [px, py, pz]
-            glUniform3f(pointLightPosLoc, pointLightPos[0], pointLightPos[1], pointLightPos[2])
+            glUniform3f(pointLightPosLoc, pointLightPos[0] - entity.position[0],
+                    pointLightPos[1] - entity.position[1],
+                    pointLightPos[2] - entity.position[2])
 
         for buf in entity.model.buffers:
             glBindBuffer(GL_ARRAY_BUFFER, buf.vboid)
@@ -378,18 +379,19 @@ class Lights:
 def main():
     model = load_model('textured-cube.obj')
     model2 = load_model('bigger-cube.obj')
+    model3 = load_model('ball-lamp.obj')
     pygame.init()
     pygame.display.set_mode((width, height), HWSURFACE | OPENGL | DOUBLEBUF)
     lights = Lights()
 
-    models = [model2, model]
+    models = [model, model2, model3]
     program = init(models)
     texid = load_opengl_texture('snow.jpg')
-    entities = [Entity(model2), Entity(model)]
-    entities[0].position[0] = -1.5
-    entities[0].position[2] = -1.6
-    entities[0].rotation[0] = radians(45)
-    entities[0].rotation[1] = radians(45)
+    entities = [Entity(model), Entity(model2), Entity(model3)]
+    entities[1].position[0] = -1.5
+    entities[1].position[2] = -1.6
+    entities[1].rotation[0] = radians(60)
+    entities[1].rotation[1] = radians(35)
 
     done = False
     mouse_look = False
