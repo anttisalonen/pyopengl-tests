@@ -341,6 +341,9 @@ class VBO:
         self.attrsize = attrsize
         self.attr = attr
 
+    def __del__(self):
+        glDeleteBuffers(1, [self.vboid])
+
 class AssetModel(Model):
     def __init__(self, filename):
         self.model = pyassimp.load(filename)
@@ -462,6 +465,10 @@ def main():
             print "FPS:", frames / 2.0
             start_time = curr_time
             frames = 0
+
+    glDeleteTextures(texid2)
+    glDeleteTextures(texid)
+    glDeleteProgram(program)
 
 world_front = numpy.array([1, 0, 0], numpy.float32)
 world_up = numpy.array([0, 1, 0], numpy.float32)
