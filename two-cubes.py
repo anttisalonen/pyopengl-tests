@@ -177,7 +177,7 @@ def init(models):
 
     return program
 
-def drawWithVBOs(entities, texid, state, lights):
+def drawWithVBOs(entities, state, lights):
     # Perspective
     fov = 90.0
     aspect_ratio = width / height
@@ -204,13 +204,6 @@ def drawWithVBOs(entities, texid, state, lights):
     target_vec = state[controls.target]
     up_vec = state[controls.up]
     rotate_cam = get_camera_rotation_matrix(target_vec, up_vec)
-
-    # Texture
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, texid)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-    glUniform1i(stextLoc, 0)
 
     # Ambient light
     curr_time = pygame.time.get_ticks()
@@ -242,6 +235,13 @@ def drawWithVBOs(entities, texid, state, lights):
     entities[2].position[2] = pointLightPos[2]
 
     for entity in entities:
+        # Texture
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, entity.model.texid)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glUniform1i(stextLoc, 0)
+
         # Translation
         trans = numpy.identity(4, numpy.float32)
         trans[3][0] = entity.position[0]
@@ -387,6 +387,10 @@ def main():
     models = [model, model2, model3]
     program = init(models)
     texid = load_opengl_texture('snow.jpg')
+    texid2 = load_opengl_texture('blue.jpg')
+    model.texid = texid
+    model2.texid = texid2
+    model3.texid = texid2
     entities = [Entity(model), Entity(model2), Entity(model3)]
     entities[1].position[0] = -1.5
     entities[1].position[2] = -1.6
@@ -414,7 +418,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glEnable(GL_TEXTURE_2D)
         glUseProgram(program)
-        drawWithVBOs(entities, texid, state, lights)
+        drawWithVBOs(entities, state, lights)
         pygame.display.flip()
 
         for delta in pos_delta.values():
