@@ -127,23 +127,31 @@ def init(models):
         print "# of texture coordinates:", len(texcoords) / 2
         print "# of normals:", len(normals) / 3
 
-        vboids = glGenBuffers(4)
         model.buffers = []
-
-        for idx, (data, size, attr) in enumerate([(vertices, 3, 'a_Position'),
-                                                  (texcoords, 2, 'a_texCoord'),
-                                                  (normals, 3, 'a_Normal')]):
-            glBindBuffer(GL_ARRAY_BUFFER, vboids[idx])
-            glBufferData(GL_ARRAY_BUFFER, data, GL_STATIC_DRAW)
-            glEnableVertexAttribArray(idx)
-            glBindAttribLocation(program, idx, attr)
-            model.buffers.append(VBO(vboids[idx], idx, size, attr))
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboids[3])
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW)
-        model.index_vboid = vboids[3]
-
         model.program = program
+        if APISupport.VBOs:
+            vboids = glGenBuffers(4)
+
+            for idx, (data, size, attr) in enumerate([(vertices, 3, 'a_Position'),
+                                                      (texcoords, 2, 'a_texCoord'),
+                                                      (normals, 3, 'a_Normal')]):
+                glBindBuffer(GL_ARRAY_BUFFER, vboids[idx])
+                glBufferData(GL_ARRAY_BUFFER, data, GL_STATIC_DRAW)
+                glEnableVertexAttribArray(idx)
+                glBindAttribLocation(program, idx, attr)
+                model.buffers.append(VBO(vboids[idx], idx, size, attr))
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboids[3])
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW)
+            model.index_vboid = vboids[3]
+
+        else:
+            for idx, (data, size, attr) in enumerate([(vertices, 3, 'a_Position'),
+                                                      (texcoords, 2, 'a_texCoord'),
+                                                      (normals, 3, 'a_Normal')]):
+                glVertexAttribPointer(idx, size, GL_FLOAT, GL_FALSE, 0, data)
+                glEnableVertexAttribArray(idx)
+                glBindAttribLocation(program, idx, attr)
 
     vertexShader = compileShader(vertex_shader_code, GL_VERTEX_SHADER)
     fragmentShader = compileShader(fragment_shader_code, GL_FRAGMENT_SHADER)
@@ -270,12 +278,22 @@ def drawWithVBOs(entities, state, lights, current_daytime):
                     pointLightPos[1] - entity.position[1],
                     pointLightPos[2] - entity.position[2])
 
-        for buf in entity.model.buffers:
-            glBindBuffer(GL_ARRAY_BUFFER, buf.vboid)
-            glVertexAttribPointer(buf.attribidx, buf.attrsize, GL_FLOAT, GL_FALSE, 0, None)
+        if APISupport.VBOs:
+            for buf in entity.model.buffers:
+                glBindBuffer(GL_ARRAY_BUFFER, buf.vboid)
+                glVertexAttribPointer(buf.attribidx, buf.attrsize, GL_FLOAT, GL_FALSE, 0, None)
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity.model.index_vboid)
-        glDrawElements(GL_TRIANGLES, len(entity.model.indices), GL_UNSIGNED_SHORT, None)
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity.model.index_vboid)
+            glDrawElements(GL_TRIANGLES, len(entity.model.indices), GL_UNSIGNED_SHORT, None)
+
+        else:
+            for idx, (data, size) in enumerate([(entity.model.vertices, 3),
+                                                (entity.model.texcoords, 2),
+                                                (entity.model.normals, 3)]):
+                glVertexAttribPointer(idx, size, GL_FLOAT, GL_FALSE, 0, data)
+                glEnableVertexAttribArray(idx)
+            glDrawElementsus(GL_TRIANGLES, entity.model.indices)
+
 
 def rotation_matrix(xrot, yrot, zrot):
     # NOTE: this could be optimized.
@@ -435,6 +453,9 @@ class Lights:
     directionalLightEnabled = True
     pointLightEnabled = True
 
+class APISupport:
+    VBOs = True
+
 def main():
     model1 = AssetModel('textured-cube.obj')
     model2 = AssetModel('bigger-cube.obj')
@@ -445,6 +466,9 @@ def main():
     lights = Lights()
 
     models = [model4, model1]
+    if not glGenBuffers:
+        APISupport.VBOs = False
+        print "VBOs not supported"
     program = init(models)
     texid = load_opengl_texture('snow.jpg')
     texid2 = load_opengl_texture('blue.jpg')
@@ -525,7 +549,8 @@ def main():
 
     glDeleteTextures(texid2)
     glDeleteTextures(texid)
-    glDeleteProgram(program)
+    if glDeleteProgram:
+        glDeleteProgram(program)
 
 world_front = numpy.array([1, 0, 0], numpy.float32)
 world_up = numpy.array([0, 1, 0], numpy.float32)
