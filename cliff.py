@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
 import time
+import random
 from math import radians, degrees, cos, sin, tan, pi
 from copy import deepcopy
 
@@ -294,7 +295,6 @@ def drawWithVBOs(entities, state, lights, current_daytime):
                 glEnableVertexAttribArray(idx)
             glDrawElementsus(GL_TRIANGLES, entity.model.indices)
 
-
 def rotation_matrix(xrot, yrot, zrot):
     # NOTE: this could be optimized.
     rotat = numpy.identity(4, numpy.float32)
@@ -457,26 +457,39 @@ class APISupport:
     VBOs = True
 
 def main():
-    model1 = AssetModel('textured-cube.obj')
-    model2 = AssetModel('bigger-cube.obj')
-    model3 = AssetModel('ball-lamp.obj')
-    model4 = TerrainModel(20, 24)
     pygame.init()
     pygame.display.set_mode((width, height), HWSURFACE | OPENGL | DOUBLEBUF)
-    lights = Lights()
 
-    models = [model4, model1]
+    textures = dict()
+    for t in ['snow.jpg', 'needles.png']:
+        textures[t] = load_opengl_texture(t)
+
+    model1 = AssetModel('tree.obj')
+    model1.texid = textures['needles.png']
+
+    terrwidth, terrheight = 20, 24
+    model4 = TerrainModel(terrwidth, terrheight)
+    model4.texid = textures['snow.jpg']
+
+    lights = Lights()
     if not glGenBuffers:
         APISupport.VBOs = False
         print "VBOs not supported"
+    models = [model4, model1]
     program = init(models)
-    texid = load_opengl_texture('snow.jpg')
-    texid2 = load_opengl_texture('blue.jpg')
-    model1.texid = texid
-    model2.texid = texid2
-    model3.texid = texid2
-    model4.texid = texid
-    entities = [Entity(model1), Entity(model4)]
+
+    entities = [Entity(model4)]
+
+    random.seed(21)
+    treecoords = random.sample(xrange(terrwidth * terrheight), terrwidth * terrheight / 8)
+    for coord in treecoords:
+        e = Entity(model1)
+        x = coord % terrheight
+        z = coord / terrheight
+        e.position[0] = float(x) + 0.5
+        e.position[1] = (model4.heightmap(x, z) + model4.heightmap(x + 1, z + 1)) / 2.0 - 0.05
+        e.position[2] = float(z) + 0.5
+        entities.append(e)
 
     done = False
     mouse_look = False
@@ -547,8 +560,9 @@ def main():
             start_time = curr_time
             frames = 0
 
-    glDeleteTextures(texid2)
-    glDeleteTextures(texid)
+    for texid in textures.values():
+        glDeleteTextures(texid)
+
     if glDeleteProgram:
         glDeleteProgram(program)
 
