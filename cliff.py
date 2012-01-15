@@ -187,6 +187,8 @@ def init(models):
 
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LEQUAL)
+    glCullFace(GL_BACK)
+    glEnable(GL_CULL_FACE)
 
     return program
 
@@ -292,7 +294,6 @@ def drawWithVBOs(entities, state, lights, current_daytime):
                                                 (entity.model.texcoords, 2),
                                                 (entity.model.normals, 3)]):
                 glVertexAttribPointer(idx, size, GL_FLOAT, GL_FALSE, 0, data)
-                glEnableVertexAttribArray(idx)
             glDrawElementsus(GL_TRIANGLES, entity.model.indices)
 
 def rotation_matrix(xrot, yrot, zrot):
@@ -420,8 +421,8 @@ class TerrainModel(Model):
                 vertices.append([i + 1, self.heightmap(i + 1, j), j])
                 vertices.append([i + 1, self.heightmap(i + 1, j + 1), j + 1])
                 indbase = j * 4 * self.height + i * 4
-                indices += [indbase, indbase + 1, indbase + 2]
-                indices += [indbase, indbase + 2, indbase + 3]
+                indices += [indbase, indbase + 2, indbase + 1]
+                indices += [indbase, indbase + 3, indbase + 2]
                 # vec_right = normalized(numpy.array([1, self.heightmap(i + 1, j) - self.heightmap(i, j), 0], numpy.float32))
                 # vec_forw = normalized(numpy.array([0, self.heightmap(i, j + 1) - self.heightmap(i, j), 1], numpy.float32))
                 # vec_up = normalized(numpy.cross(vec_forw, vec_right))
